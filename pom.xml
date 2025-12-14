@@ -17,6 +17,7 @@
         <module>security-service</module>
         <module>service-registry</module>
         <module>api-gateway</module>
+        <module>notification-service</module>
     </modules>
 
     <properties>

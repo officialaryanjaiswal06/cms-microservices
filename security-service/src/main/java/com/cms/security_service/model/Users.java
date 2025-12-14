@@ -38,6 +38,9 @@ public class Users implements UserDetails {
 //    )
 //    private Set<Role> roles = new HashSet<>();
 
+    @Column(name = "is_enabled")
+    private boolean enabled = false;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_role_tb",
@@ -50,5 +53,10 @@ public class Users implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return this.enabled;
     }
 }

@@ -118,38 +118,6 @@ public class UserController {
     }
 
     // 4. Create User (Requires CREATE permission on 'USER' module)
-//    @PostMapping
-////    @PreAuthorize("hasAuthority('USER_CREATE')")
-//    @PreAuthorize("hasAuthority('IAM:MANAGE_USER_PERMISSIONS')")
-//    @Transactional
-//    public ResponseEntity<UserResponse> create(@RequestBody CreateUserRequest req) {
-//        if (usersRepo.existsByUsername(req.getUsername())) {
-//            return ResponseEntity.badRequest().build();
-//        }
-//
-//        Users u = new Users();
-//        u.setUsername(req.getUsername());
-//        u.setEmail(req.getEmail());
-//        u.setPassword(passwordEncoder.encode(req.getPassword()));
-//
-//        // Assign Roles sent in request
-//        if (req.getRoles() != null && !req.getRoles().isEmpty()) {
-//            Set<Role> rolesToAssign = new HashSet<>();
-//
-//            // Loop through the String list from Request
-//            for (String rName : req.getRoles()) {
-//                // Use findByName because your Entity field is 'name'
-//                Role r = roleRepo.findByName(rName)
-//                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Role not found: " + rName));
-//                rolesToAssign.add(r);
-//            }
-//            u.setRoles(rolesToAssign);
-//        }
-//
-//        Users saved = usersRepo.save(u);
-//        return ResponseEntity.created(URI.create("/users/" + saved.getId())).body(toResponse(saved));
-//    }
-
 @PostMapping
 @PreAuthorize("hasAuthority('IAM:MANAGE_USER_PERMISSIONS')")
 @Transactional
@@ -207,56 +175,7 @@ public ResponseEntity<UserResponse> create(@RequestBody CreateUserRequest req, A
     return ResponseEntity.created(URI.create("/users/" + saved.getId())).body(toResponse(saved));
 }
 
-    // 5. Update User details
-//    @PutMapping("/{id}")
-////    @PreAuthorize("hasAuthority('USER_UPDATE')")
-//    @PreAuthorize("hasAuthority('IAM:MANAGE_USER_PERMISSIONS')")
-//    public ResponseEntity<UserResponse> update(@PathVariable Long id,
-//                                               @RequestBody UpdateUserRequest req,
-//                                               Authentication auth) {
-//        Users u = usersRepo.findById(id)
-//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-//
-//        checkSafeguards(u, auth);
-//
-//        if (req.getEmail() != null) u.setEmail(req.getEmail());
-//        if (req.getPassword() != null && !req.getPassword().isBlank()) {
-//            u.setPassword(passwordEncoder.encode(req.getPassword()));
-//        }
-//
-//        Users saved = usersRepo.save(u);
-//        return ResponseEntity.ok(toResponse(saved));
-//    }
-
-
-    // 6. Update Roles separate endpoint
-//    @PutMapping("/{id}/roles")
-////    @PreAuthorize("hasAuthority('USER_UPDATE')")
-//    @PreAuthorize("hasAuthority('IAM:MANAGE_USER_PERMISSIONS')")
-//    @Transactional
-//    public ResponseEntity<UserResponse> updateRoles(@PathVariable Long id,
-//                                                    @RequestBody UpdateRolesRequest req,
-//                                                    Authentication auth) {
-//        Users u = usersRepo.findById(id)
-//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-//
-//        checkSafeguards(u, auth);
-//
-//        Set<Role> newRoles = new HashSet<>();
-//
-//        // ⚠️ FIXED: Changed req.getName() to req.getRoles() (assuming your DTO has list of strings)
-//        // ⚠️ FIXED: Using variable 'rName' correctly in the repo call
-//        for (String rName : req.getRoles()) {
-//            Role r = roleRepo.findByName(rName)
-//                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Role not found: " + rName));
-//            newRoles.add(r);
-//        }
-//
-//        u.setRoles(newRoles);
-//        Users saved = usersRepo.save(u);
-//        return ResponseEntity.ok(toResponse(saved));
-//    }
-
+    // 5. Update User Roles (Requires UPDATE permission on 'USER' module)
 @PutMapping("/{id}/roles")
 @PreAuthorize("hasAuthority('IAM:MANAGE_USER_PERMISSIONS')")
 @Transactional
@@ -352,5 +271,33 @@ public ResponseEntity<UserResponse> updateRoles(@PathVariable Long id,
         // 6. Delete
         usersRepo.delete(targetUser);
         return ResponseEntity.noContent().build();
+    }
+
+    // this is to get all the email from the role
+//    @GetMapping("/emails")
+//    public List<String> getAllEmailsByRole(@RequestParam String roleName) {
+//        // Assuming your Users entity has a relationship with Roles
+//        // Logic: Find all users where roles.name = roleName
+//        return usersRepo.findAll().stream()
+//                .filter(u -> u.getRoles().stream().anyMatch(r -> r.getName().equals(roleName)))
+//                .map(Users::getEmail)
+//                .toList();
+//    }
+
+    @GetMapping("/emails")
+    public List<String> getEmailsByRole(
+            @RequestParam String roleName,
+            @RequestParam(defaultValue = "false") boolean strict) {
+
+        if (strict) {
+            // New Logic: Get users with ONLY this role
+            return usersRepo.findEmailsByStrictRole(roleName);
+        } else {
+            // Old Logic: Get anyone who has this role (plus maybe others)
+            return usersRepo.findAll().stream()
+                    .filter(u -> u.getRoles().stream().anyMatch(r -> r.getName().equals(roleName)))
+                    .map(u -> u.getEmail())
+                    .toList();
+        }
     }
 }

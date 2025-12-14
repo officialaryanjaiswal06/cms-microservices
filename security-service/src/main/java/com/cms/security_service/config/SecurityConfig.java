@@ -75,7 +75,8 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/login", "/register", "/error").permitAll()
+                        .requestMatchers("/login", "/auth/**", "/error").permitAll()
+                        .requestMatchers("/users/emails").permitAll()
                         .anyRequest().authenticated()
                 );
 
