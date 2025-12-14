@@ -61,6 +61,8 @@
 
 package com.cms.security_service.controller;
 
+import com.cms.security_service.DTO.ForgotPasswordRequest;
+import com.cms.security_service.DTO.ResetPasswordRequest;
 import com.cms.security_service.DTO.VerifyOtpRequest;
 import com.cms.security_service.model.Users;
 
@@ -111,5 +113,30 @@ public ResponseEntity<String> verifyAccount(@RequestBody VerifyOtpRequest reques
         return ResponseEntity.badRequest().body(e.getMessage());
     }
 }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        try {
+            // Access the email via the DTO getter
+            String res = authService.initiateForgotPassword(request.getEmail());
+            return ResponseEntity.ok(res);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            String res = authService.completePasswordReset(
+                    request.getEmail(),
+                    request.getOtp(),
+                    request.getNewPassword()
+            );
+            return ResponseEntity.ok(res);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 
 }

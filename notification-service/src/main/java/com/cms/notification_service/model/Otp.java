@@ -12,4 +12,8 @@ public class Otp {
     private String email;
     private String otpCode;
     private LocalDateTime expiryTime;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OtpType type;
 }

@@ -14,8 +14,13 @@ public class RabbitConsumer {
     // Listener logic
     @RabbitListener(queues = "otp_queue")
     public void receiveMessage(OtpMessageDto msg) {
+
         // Trigger the service logic
-        otpService.generateAndQueueOtp(msg.getEmail());
+        otpService.generateAndQueueOtp(msg.getEmail(),
+                msg.getSubject(),
+                msg.getMessageBody(),
+                msg.getType()
+        );
     }
 
 }
