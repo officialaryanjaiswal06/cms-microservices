@@ -23,9 +23,17 @@ public class EmailRequest {
 
     private LocalDateTime createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private NotificationCategory category;
+
+
     @PrePersist
     public void init() {
         this.createdAt = LocalDateTime.now();
         if(this.status == null) this.status = "PENDING";
+
+        if (this.category == null) this.category = NotificationCategory.ACCOUNT;
     }
+
 }

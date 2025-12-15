@@ -25,7 +25,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // Stateless APIs don't need CSRF
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/otp/**").permitAll()
+                        .requestMatchers("/otp/**","/push/broadcast/**","/notifications/mine").permitAll()
                         .anyRequest().authenticated()
                 );
 

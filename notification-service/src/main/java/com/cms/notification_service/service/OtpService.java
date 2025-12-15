@@ -2,6 +2,7 @@ package com.cms.notification_service.service;
 
 
 import com.cms.notification_service.model.EmailRequest;
+import com.cms.notification_service.model.NotificationCategory;
 import com.cms.notification_service.model.Otp;
 import com.cms.notification_service.model.OtpType;
 import com.cms.notification_service.repository.EmailRepository;
@@ -57,7 +58,7 @@ public class OtpService {
         req.setMessageBody(body + "{{OTP}}");
         req.setStatus("PENDING");
         req.setRetryTimes(0);
-
+        req.setCategory(NotificationCategory.OTP);
         emailRepository.save(req);
     }
 

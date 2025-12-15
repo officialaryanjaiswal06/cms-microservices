@@ -3,6 +3,7 @@ package com.cms.notification_service.controller;
 
 import com.cms.notification_service.client.SecurityClient;
 import com.cms.notification_service.model.EmailRequest;
+import com.cms.notification_service.model.NotificationCategory;
 import com.cms.notification_service.repository.EmailRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,13 @@ public class AdminNotificationController {
         request.setRetryTimes(0);
         request.setCreatedAt(LocalDateTime.now()); // Ensure timestamp is current
 
+        // ✅ DYNAMIC CATEGORY LOGIC
+        // If Frontend sent "PROMOTION", keep it.
+        // If Frontend sent "SYSTEM_ALERT", keep it.
+        // If Frontend sent NOTHING (null), default to SYSTEM_ALERT.
+        if (request.getCategory() == null) {
+            request.setCategory(NotificationCategory.SYSTEM_ALERT);
+        }
         // 3. Save to Database
         emailRepository.save(request);
 
@@ -52,7 +60,8 @@ public class AdminNotificationController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN') or hasAuthority('NOTIFICATION_READ')")
     public ResponseEntity<List<EmailRequest>> getAllNotificationHistory() {
 
-        List<EmailRequest> history = emailRepository.findAll();
+//        List<EmailRequest> history = emailRepository.findAll();
+        List<EmailRequest> history = emailRepository.findByCategoryNotOrderByCreatedAtDesc(NotificationCategory.OTP);
         return ResponseEntity.ok(history);
     }
     // delete notification by id
@@ -94,6 +103,13 @@ public class AdminNotificationController {
             req.setMessageBody(requestTemplate.getMessageBody());
             req.setStatus("PENDING");
             req.setRetryTimes(0);
+
+            // ✅ Dynamic Check
+            if (requestTemplate.getCategory() != null) {
+                req.setCategory(requestTemplate.getCategory());
+            } else {
+                req.setCategory(NotificationCategory.SYSTEM_ALERT); // Default
+            }
 
             emailRepository.save(req);
             count++;
