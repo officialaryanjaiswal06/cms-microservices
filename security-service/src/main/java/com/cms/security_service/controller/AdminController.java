@@ -102,37 +102,6 @@ public class AdminController {
         return ResponseEntity.ok(dtos);
     }
 
-    // 4. CONFIGURE A ROLE
-//    @PreAuthorize("hasAuthority('IAM:MANAGE_USER_PERMISSIONS')")
-//    @PutMapping("/roles/{roleId}/permissions")
-//    @Transactional
-//    public ResponseEntity<Void> updateRolePermissions(@PathVariable Long roleId,
-//                                                      @RequestBody List<PermissionDto> permissionDtos) {
-//        Role role = roleRepo.findById(roleId)
-//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role not found"));
-//
-//        role.getPermissions().clear();
-//
-//        for (PermissionDto dto : permissionDtos) {
-//
-//            // ✅ THIS LINE NOW WORKS because we imported the custom 'Module' class at the top
-//            Module module = moduleRepo.findByModuleName(dto.getModuleName())
-//                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Module not found: " + dto.getModuleName()));
-//
-//            RoleModulePermission permission = new RoleModulePermission();
-//            permission.setRole(role);
-//            permission.setModule(module);
-//            permission.setCanSelect(dto.isCanSelect());
-//            permission.setCanCreate(dto.isCanCreate());
-//            permission.setCanUpdate(dto.isCanUpdate());
-//            permission.setCanDelete(dto.isCanDelete());
-//
-//            role.getPermissions().add(permission);
-//        }
-//
-//        roleRepo.save(role);
-//        return ResponseEntity.noContent().build();
-//    }
     @PreAuthorize("hasAuthority('IAM:MANAGE_USER_PERMISSIONS')")
     @PutMapping("/roles/{roleId}/permissions")
     @Transactional

@@ -8,7 +8,8 @@ import java.util.Set;
 
 @Entity
 @Table(name = "module_tb")
-@Getter @Setter
+@Getter
+@Setter
 @NoArgsConstructor @AllArgsConstructor
 public class Module {
 

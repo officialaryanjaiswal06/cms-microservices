@@ -1,25 +1,19 @@
-package com.cms.notification_service;
+package org.cms.post_service;
 
-import com.cms.notification_service.config.ApplicationAuditAware;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
-import org.springframework.context.annotation.Bean;
-import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
-@EnableDiscoveryClient
-@EnableScheduling
 @SpringBootApplication
+@EnableDiscoveryClient
 @EnableFeignClients
 @EnableJpaAuditing(auditorAwareRef = "auditorAware")
-public class NotificationServiceApplication {
+public class    PostServiceApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(NotificationServiceApplication.class, args);
+		SpringApplication.run(PostServiceApplication.class, args);
 	}
-
 
 }

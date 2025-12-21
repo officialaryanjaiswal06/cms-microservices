@@ -18,6 +18,7 @@
         <module>service-registry</module>
         <module>api-gateway</module>
         <module>notification-service</module>
+        <module>post-service</module>
     </modules>
 
     <properties>

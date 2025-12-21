@@ -1,14 +1,21 @@
 package com.cms.notification_service.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Data
 @Table(name = "email_tb")
-public class EmailRequest {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@SuperBuilder // Needed to extend CommonTable
+@EqualsAndHashCode(callSuper = true)
+public class EmailRequest extends CommonTable{
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -28,12 +35,39 @@ public class EmailRequest {
     private NotificationCategory category;
 
 
-    @PrePersist
-    public void init() {
-        this.createdAt = LocalDateTime.now();
-        if(this.status == null) this.status = "PENDING";
+//    @PrePersist
+//    public void init() {
+//        this.createdAt = LocalDateTime.now();
+//        if(this.status == null) this.status = "PENDING";
+//
+//        if (this.category == null) this.category = NotificationCategory.ACCOUNT;
+//    }
 
+    @Override
+    protected String provideEntryName() {
+        return "To: " + this.email;
+    }
+
+    @Override
+    protected String provideEntryType() {
+        return "NOTIFICATION_" + (this.category != null ? this.category.name() : "GENERAL");
+    }
+
+    @Override
+    protected String provideModuleName() {
+        return "NOTIFICATION_SERVICE";
+    }
+
+    @Override
+    public void onPrePersist() {
+        // --- YOUR LOGIC (Formerly in init()) ---
+        this.createdAt = LocalDateTime.now();
+        if (this.status == null) this.status = "PENDING";
         if (this.category == null) this.category = NotificationCategory.ACCOUNT;
+
+        // --- PARENT LOGIC (Audit Columns) ---
+        // We run this AFTER setting local defaults, so provideEntryType() sees the category!
+        super.onPrePersist();
     }
 
 }
