@@ -11,4 +11,5 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findBySchemaSchemaNameAndIsPublishedTrue(String schemaName);
 
     boolean existsBySchemaId(Long schemaId);
+    List<Post> findByIsPublishedTrue();
 }

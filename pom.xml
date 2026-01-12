@@ -19,6 +19,7 @@
         <module>api-gateway</module>
         <module>notification-service</module>
         <module>post-service</module>
+        <module>chatbot-service</module>
     </modules>
 
     <properties>

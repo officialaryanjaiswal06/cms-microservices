@@ -7,10 +7,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.cms.post_service.client.SecurityClient;
 import org.cms.post_service.dto.ModuleDto;
+import org.cms.post_service.dto.PostEventDto;
 import org.cms.post_service.model.Post;
 import org.cms.post_service.model.PostSchema;
 import org.cms.post_service.repository.PostRepository;
 import org.cms.post_service.repository.PostSchemaRepository;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,7 +34,7 @@ public class PostService {
     private final SecurityClient securityClient;
     private final ObjectMapper mapper;
     private final FileStorageService fileService;
-
+    private final RabbitTemplate rabbitTemplate;
     // ==========================================
     // 1. ADMIN: CREATE SCHEMA DEFINITION
     // ==========================================
@@ -101,7 +103,15 @@ public class PostService {
             // ✅ Set Status
             post.setPublished(isPublished);
 
-            return postRepository.save(post);
+//            return postRepository.save(post);
+            Post savedPost = postRepository.save(post);
+
+            // ✅ TRIGGER AI: Broadcast that content exists
+            if (isPublished) {
+                notifyAiService(savedPost);
+            }
+
+            return savedPost;
 
         } catch (IOException e) {
             throw new RuntimeException("Error processing content/file", e);
@@ -109,22 +119,28 @@ public class PostService {
     }
 
     // ==========================================
-    // 3. READ OPERATIONS
-    // ==========================================
-// ==========================================
-    // NEW: TOGGLE STATUS (Publish/Unpublish)
-    // ==========================================
+    // 3. READER: READ CONTENT
     @Transactional
     public Post togglePublishStatus(Long id, boolean status) {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Post not found ID: " + id));
 
-        // Must be Editor/Admin to change status
         String moduleName = post.getSchema().getSchemaName();
         checkPermission(moduleName, "UPDATE");
 
         post.setPublished(status);
-        return postRepository.save(post);
+        Post savedPost = postRepository.save(post);
+
+        // ✅ TRIGGER AI: Status changed
+        if(status) {
+            // It became Public -> AI should Learn it
+            notifyAiService(savedPost);
+        } else {
+            // It became Private -> AI should Forget it
+            notifyAiDeletion(savedPost.getId());
+        }
+
+        return savedPost;
     }
 
 
@@ -167,13 +183,6 @@ public class PostService {
         return post;
     }
 
-    // Allow frontend to fetch the JSON blueprint
-//    public PostSchema getSchemaDefinition(String moduleName, String schemaType) {
-//        // Typically public or READ access
-//        // checkPermission(moduleName, "READ"); // Optional
-//        return schemaRepository.findByModuleNameAndSchemaType(moduleName, schemaType)
-//                .orElseThrow(() -> new RuntimeException("Schema definition not found"));
-//    }
 
     public PostSchema getSchemaDefinition(String moduleName, String schemaType) {
 
@@ -191,34 +200,39 @@ public class PostService {
     // 4. UPDATE / DELETE
     // ==========================================
 
-    @Transactional
-    public Post updatePost(Long id, String jsonString, MultipartFile file) {
-        Post post = postRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Post not found ID: " + id));
 
-        String moduleName = post.getSchema().getModuleName();
-        checkPermission(moduleName, "UPDATE");
+@Transactional
+public Post updatePost(Long id, String jsonString, MultipartFile file) {
+    Post post = postRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Post not found ID: " + id));
 
-        try {
-            // Update JSON Data
-            if (jsonString != null && !jsonString.isEmpty()) {
-                Map<String, Object> newData = mapper.readValue(jsonString, new TypeReference<>() {});
-                // Replacing entirely (or you can merge)
-                post.getData().putAll(newData);
-            }
+    String moduleName = post.getSchema().getModuleName();
+    checkPermission(moduleName, "UPDATE");
 
-            // Update File
-            if (file != null && !file.isEmpty()) {
-                String newPath = fileService.saveFile(file);
-                post.setAttachmentPath(newPath);
-                post.getData().put("file_path", newPath);
-            }
-
-            return postRepository.save(post);
-        } catch (IOException e) {
-            throw new RuntimeException("Update failed", e);
+    try {
+        if (jsonString != null && !jsonString.isEmpty()) {
+            Map<String, Object> newData = mapper.readValue(jsonString, new TypeReference<>() {});
+            post.getData().putAll(newData);
         }
+        if (file != null && !file.isEmpty()) {
+            String newPath = fileService.saveFile(file);
+            post.setAttachmentPath(newPath);
+            post.getData().put("file_path", newPath);
+        }
+
+        Post savedPost = postRepository.save(post);
+
+        // ✅ TRIGGER AI: Update Content in Memory (only if published)
+        if (savedPost.isPublished()) {
+            notifyAiService(savedPost);
+        }
+
+        return savedPost;
+
+    } catch (IOException e) {
+        throw new RuntimeException("Update failed", e);
     }
+}
 
     @Transactional
     public void deletePost(Long id) {
@@ -226,6 +240,7 @@ public class PostService {
                 .orElseThrow(() -> new RuntimeException("Post not found"));
 
         checkPermission(post.getSchema().getModuleName(), "DELETE");
+        notifyAiDeletion(id);
         postRepository.delete(post);
     }
 
@@ -251,5 +266,61 @@ public class PostService {
         if (!hasPerm) {
             throw new AccessDeniedException("Access Denied. Required Permission: " + requiredAuth);
         }
+    }
+
+    private void notifyAiService(Post post) {
+        try {
+            // IMPORTANT: Create this PostEventDto class if you haven't!
+            PostEventDto event = new PostEventDto(
+                    post.getId().toString(),
+                    post.getSchema().getSchemaType(), // "ACADEMIC", "NOTICE"
+                    post.getData()
+            );
+
+            // Send to RabbitMQ
+            // Exchange: "ai_exchange"
+            // RoutingKey: "content.update"
+            rabbitTemplate.convertAndSend("ai_exchange", "content.update", event);
+
+            log.info("🤖 AI Notification sent for Post ID: {}", post.getId());
+
+        } catch (Exception e) {
+            // Don't crash the CMS if the AI/Queue is down
+            log.error("⚠️ Failed to notify AI service: {}", e.getMessage());
+        }
+    }
+
+    private void notifyAiDeletion(Long postId) {
+        try {
+            // Sending with NULL data implies deletion request
+            // Or you can create a specific "content.delete" key if you prefer
+            // Here, I am re-using the DTO but leaving map empty/null
+            PostEventDto event = new PostEventDto(
+                    postId.toString(),
+                    "DELETED",
+                    null
+            );
+
+            rabbitTemplate.convertAndSend("ai_exchange", "content.update", event);
+            log.info("🗑️ AI Forget Request sent for Post ID: {}", postId);
+
+        } catch (Exception e) {
+            log.error("⚠️ Failed to notify AI delete: {}", e.getMessage());
+        }
+    }
+    @Transactional(readOnly = true) // Read-only is faster
+    public String syncAllExistingPostsToAi() {
+        // 1. Fetch ALL published posts from the database
+        List<Post> allPosts = postRepository.findByIsPublishedTrue();
+
+        int count = 0;
+        for (Post post : allPosts) {
+            // 2. Reuse your existing notification logic
+            notifyAiService(post);
+            count++;
+        }
+
+        log.info("🔄 Manually triggered AI Sync for {} posts.", count);
+        return "Sync triggered for " + count + " posts. Check AI logs.";
     }
 }

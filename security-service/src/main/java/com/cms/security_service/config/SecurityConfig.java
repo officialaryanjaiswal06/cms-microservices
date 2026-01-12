@@ -77,6 +77,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/login", "/auth/**", "/error").permitAll()
                         .requestMatchers("/users/emails").permitAll()
+                        .requestMatchers("/cms/sync-ai").permitAll()
                         .requestMatchers("/internal/**").permitAll()
                         .anyRequest().authenticated()
                 );

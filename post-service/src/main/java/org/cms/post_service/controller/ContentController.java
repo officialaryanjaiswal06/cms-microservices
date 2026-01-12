@@ -175,7 +175,7 @@ public class ContentController {
     @GetMapping("/schemas/{moduleName}")
     public ResponseEntity<?> getSchemasByModule(@PathVariable String moduleName) {
         try {
-            // Returns a LIST of blueprints (e.g. EVENT, NOTICE) for that module
+
             List<PostSchema> schemas = service.getSchemasByModule(moduleName);
             return ResponseEntity.ok(schemas);
         } catch (Exception e) {
@@ -187,11 +187,10 @@ public class ContentController {
     @PostMapping("/upload")
     public ResponseEntity<String> uploadImage(@RequestParam("file") MultipartFile file) {
         try {
-            // Save to Disk
+
             String filename = fileService.saveFile(file);
 
-            // Generate the Public URL (This is what the frontend puts in the JSON form)
-            // Note: Returns a URL pointing to the GET endpoint below
+
             String fileUrl = "http://localhost:8080/content/images/" + filename;
 
             return ResponseEntity.ok(fileUrl);
@@ -200,13 +199,11 @@ public class ContentController {
         }
     }
 
-    // 2. Serving Logic (So the browser can see the image)
-    // Endpoint: GET /content/images/{filename}
+
     @GetMapping("/images/{filename:.+}")
     public ResponseEntity<Resource> serveImage(@PathVariable String filename) {
         try {
-            // Re-using logic assuming fileService has a 'load' method.
-            // If you only implemented 'saveFile' in service, see Step 2 below.
+
             org.springframework.core.io.Resource file = fileService.loadFileAsResource(filename);
 
             return ResponseEntity.ok()
@@ -216,5 +213,13 @@ public class ContentController {
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+
+    @PostMapping("/cms/sync-ai")
+// @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> syncToAi() {
+        String result = service.syncAllExistingPostsToAi();
+        return ResponseEntity.ok(result);
     }
 }
